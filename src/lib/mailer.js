@@ -165,4 +165,4 @@ async function sendWelcomeEmail(to, unsubscribeToken) {
   });
 }
 
-module.exports = { sendConfirmationEmail, sendWelcomeEmail };
+module.exports = { sendMail, sendConfirmationEmail, sendWelcomeEmail };

@@ -19,6 +19,7 @@ const config = {
     process.env.APP_ORIGIN ||
       'http://localhost:5173,http://localhost:5174',
   ),
+  adminPassword: process.env.ADMIN_PASSWORD || '',
   db: {
     host: process.env.DB_HOST || '',
     port: Number(process.env.DB_PORT || 3306),
