@@ -5,7 +5,7 @@ const { newsletterController } = require('./newsletter.controller');
 
 const subscribeLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Zu viele Anfragen. Bitte versuche es in 15 Minuten erneut.' },
