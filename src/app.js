@@ -16,7 +16,11 @@ function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
-        // Allow requests with no origin (server-to-server, curl, etc.)
+        // In development, allow all origins (incl. Postman, curl, no-origin requests)
+        if (config.nodeEnv !== 'production') {
+          return callback(null, true);
+        }
+        // In production, restrict to configured origins
         if (!origin || config.appOrigins.includes(origin)) {
           return callback(null, true);
         }
