@@ -5,6 +5,21 @@ const { ApiError } = require('../../lib/errors');
 const { generateToken } = require('../../lib/token');
 const { sendConfirmationEmail, sendWelcomeEmail } = require('../../lib/mailer');
 
+function translateDbError(err) {
+  console.error('[newsletter] Database error:', err);
+  const code = err?.code || '';
+  if (['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'].includes(code)) {
+    throw new ApiError(503, 'Database unreachable. Please try again later.');
+  }
+  if (code === 'ER_NO_SUCH_TABLE') {
+    throw new ApiError(503, 'Database table missing — run: npm run migrate');
+  }
+  if (code === 'ER_ACCESS_DENIED_ERROR') {
+    throw new ApiError(503, 'Database access denied. Check DB_USER and DB_PASSWORD.');
+  }
+  throw err;
+}
+
 const newsletterService = {
   /**
    * Subscribe an email address.
@@ -15,10 +30,12 @@ const newsletterService = {
   async subscribe(email) {
     const db = getPool();
 
-    const [rows] = await db.query(
-      'SELECT id, status, confirm_token, unsubscribe_token FROM newsletter_subscribers WHERE email = ? LIMIT 1',
-      [email],
-    );
+    const [rows] = await db
+      .query(
+        'SELECT id, status, confirm_token, unsubscribe_token FROM newsletter_subscribers WHERE email = ? LIMIT 1',
+        [email],
+      )
+      .catch(translateDbError);
 
     const existing = rows[0];
 
@@ -31,13 +48,15 @@ const newsletterService = {
         // Re-activate: generate fresh tokens, set back to pending
         const confirmToken = generateToken();
         const unsubscribeToken = generateToken();
-        await db.query(
-          `UPDATE newsletter_subscribers
-           SET status = 'pending', confirm_token = ?, unsubscribe_token = ?, subscribed_at = NOW(),
-               confirmed_at = NULL, unsubscribed_at = NULL
-           WHERE id = ?`,
-          [confirmToken, unsubscribeToken, existing.id],
-        );
+        await db
+          .query(
+            `UPDATE newsletter_subscribers
+             SET status = 'pending', confirm_token = ?, unsubscribe_token = ?, subscribed_at = NOW(),
+                 confirmed_at = NULL, unsubscribed_at = NULL
+             WHERE id = ?`,
+            [confirmToken, unsubscribeToken, existing.id],
+          )
+          .catch(translateDbError);
         await sendConfirmationEmail(email, confirmToken, unsubscribeToken);
         return { status: 'pending' };
       }
@@ -52,11 +71,13 @@ const newsletterService = {
     const confirmToken = generateToken();
     const unsubscribeToken = generateToken();
 
-    await db.query(
-      `INSERT INTO newsletter_subscribers (id, email, status, confirm_token, unsubscribe_token)
-       VALUES (?, ?, 'pending', ?, ?)`,
-      [id, email, confirmToken, unsubscribeToken],
-    );
+    await db
+      .query(
+        `INSERT INTO newsletter_subscribers (id, email, status, confirm_token, unsubscribe_token)
+         VALUES (?, ?, 'pending', ?, ?)`,
+        [id, email, confirmToken, unsubscribeToken],
+      )
+      .catch(translateDbError);
 
     await sendConfirmationEmail(email, confirmToken, unsubscribeToken);
 
@@ -70,13 +91,15 @@ const newsletterService = {
   async confirm(token) {
     const db = getPool();
 
-    const [rows] = await db.query(
-      `SELECT id, status, email, unsubscribe_token
-       FROM newsletter_subscribers
-       WHERE confirm_token = ?
-       LIMIT 1`,
-      [token],
-    );
+    const [rows] = await db
+      .query(
+        `SELECT id, status, email, unsubscribe_token
+         FROM newsletter_subscribers
+         WHERE confirm_token = ?
+         LIMIT 1`,
+        [token],
+      )
+      .catch(translateDbError);
 
     const subscriber = rows[0];
 
@@ -93,12 +116,14 @@ const newsletterService = {
       throw new ApiError(410, 'Diese Anmeldung wurde bereits abgemeldet.');
     }
 
-    await db.query(
-      `UPDATE newsletter_subscribers
-       SET status = 'confirmed', confirmed_at = NOW(), confirm_token = NULL
-       WHERE id = ?`,
-      [subscriber.id],
-    );
+    await db
+      .query(
+        `UPDATE newsletter_subscribers
+         SET status = 'confirmed', confirmed_at = NOW(), confirm_token = NULL
+         WHERE id = ?`,
+        [subscriber.id],
+      )
+      .catch(translateDbError);
 
     // Send a welcome email (fire-and-forget — don't block the redirect)
     sendWelcomeEmail(subscriber.email, subscriber.unsubscribe_token).catch((err) =>
@@ -114,10 +139,12 @@ const newsletterService = {
   async unsubscribe(token) {
     const db = getPool();
 
-    const [rows] = await db.query(
-      'SELECT id, status FROM newsletter_subscribers WHERE unsubscribe_token = ? LIMIT 1',
-      [token],
-    );
+    const [rows] = await db
+      .query(
+        'SELECT id, status FROM newsletter_subscribers WHERE unsubscribe_token = ? LIMIT 1',
+        [token],
+      )
+      .catch(translateDbError);
 
     const subscriber = rows[0];
 
@@ -126,12 +153,14 @@ const newsletterService = {
     }
 
     if (subscriber.status !== 'unsubscribed') {
-      await db.query(
-        `UPDATE newsletter_subscribers
-         SET status = 'unsubscribed', unsubscribed_at = NOW()
-         WHERE id = ?`,
-        [subscriber.id],
-      );
+      await db
+        .query(
+          `UPDATE newsletter_subscribers
+           SET status = 'unsubscribed', unsubscribed_at = NOW()
+           WHERE id = ?`,
+          [subscriber.id],
+        )
+        .catch(translateDbError);
     }
 
     return { unsubscribed: true };

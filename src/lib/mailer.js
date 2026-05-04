@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 
 const { config } = require('../config');
+const { ApiError } = require('./errors');
 
 let _transporter = null;
 
@@ -28,7 +29,20 @@ async function sendMail({ to, subject, html, text }) {
   }
 
   const transporter = getTransporter();
-  await transporter.sendMail({ from: config.email.from, to, subject, html, text });
+  try {
+    await transporter.sendMail({ from: config.email.from, to, subject, html, text });
+  } catch (err) {
+    console.error('[mailer] Failed to send email to', to, ':', err);
+    const msg = String(err?.message || '').toLowerCase();
+    const code = err?.code || '';
+    if (['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'].includes(code)) {
+      throw new ApiError(502, 'Mail server unreachable. Please try again later.');
+    }
+    if (msg.includes('authentication') || msg.includes('auth') || err?.responseCode === 535) {
+      throw new ApiError(502, 'Mail server authentication failed. Check EMAIL_USER and EMAIL_PASSWORD.');
+    }
+    throw new ApiError(502, `Failed to send confirmation email: ${err.message}`);
+  }
 }
 
 // ─── Email templates ──────────────────────────────────────────────────────────
