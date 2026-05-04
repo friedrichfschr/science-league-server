@@ -35,6 +35,9 @@ function createApp() {
   app.use(express.json({ limit: '64kb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
+  // Admin panel needs relaxed CSP to allow inline scripts
+  app.use('/admin', helmet({ contentSecurityPolicy: false }));
+
   app.get('/', (_req, res) => {
     res.json({
       app: 'foodconnect-newsletter-server',
