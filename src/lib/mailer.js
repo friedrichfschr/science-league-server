@@ -1,7 +1,6 @@
 const nodemailer = require('nodemailer');
 
 const { config } = require('../config');
-const { ApiError } = require('./errors');
 
 let _transporter = null;
 
@@ -29,20 +28,7 @@ async function sendMail({ to, subject, html, text }) {
   }
 
   const transporter = getTransporter();
-  try {
-    await transporter.sendMail({ from: config.email.from, to, subject, html, text });
-  } catch (err) {
-    console.error('[mailer] Failed to send email to', to, ':', err);
-    const msg = String(err?.message || '').toLowerCase();
-    const code = err?.code || '';
-    if (['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'].includes(code)) {
-      throw new ApiError(502, 'Mail server unreachable. Please try again later.');
-    }
-    if (msg.includes('authentication') || msg.includes('auth') || err?.responseCode === 535) {
-      throw new ApiError(502, 'Mail server authentication failed. Check EMAIL_USER and EMAIL_PASSWORD.');
-    }
-    throw new ApiError(502, `Failed to send confirmation email: ${err.message}`);
-  }
+  await transporter.sendMail({ from: config.email.from, to, subject, html, text });
 }
 
 // ─── Email templates ──────────────────────────────────────────────────────────
@@ -165,4 +151,39 @@ async function sendWelcomeEmail(to, unsubscribeToken) {
   });
 }
 
-module.exports = { sendMail, sendConfirmationEmail, sendWelcomeEmail };
+// ─── Account email verification ───────────────────────────────────────────────
+
+function verifyAccountEmailHtml(verifyUrl) {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f7f4ee;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07);">
+    <tr><td style="background:linear-gradient(135deg,#1c1917,#064e3b);padding:32px 40px;">
+      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#6ee7b7;">FoodConnectMarkt</p>
+      <h1 style="margin:12px 0 0;font-size:26px;font-weight:700;color:#fff;">Bitte bestätige deine E-Mail-Adresse</h1>
+    </td></tr>
+    <tr><td style="padding:36px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">Du hast ein Konto beim FoodConnectMarkt erstellt. Klicke auf den Button, um deine E-Mail-Adresse zu bestätigen und dein Konto zu aktivieren.</p>
+      <p style="margin:0 0 32px;font-size:15px;line-height:1.7;color:#374151;">Der Link ist <strong>24 Stunden</strong> gültig.</p>
+      <a href="${verifyUrl}" style="display:inline-block;background:#065f46;color:#fff;text-decoration:none;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:600;">E-Mail bestätigen →</a>
+      <p style="margin:28px 0 0;font-size:12px;color:#9ca3af;word-break:break-all;">Oder kopiere diesen Link:<br/><a href="${verifyUrl}" style="color:#065f46;">${verifyUrl}</a></p>
+    </td></tr>
+    <tr><td style="padding:20px 40px 32px;border-top:1px solid #f3f4f6;">
+      <p style="margin:0;font-size:12px;color:#9ca3af;">Wenn du kein Konto erstellt hast, kannst du diese E-Mail ignorieren.</p>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+async function sendAccountVerificationEmail(to, verifyToken) {
+  const verifyUrl = `${config.serverUrl}/api/auth/verify?token=${verifyToken}`;
+  await sendMail({
+    to,
+    subject: 'Bestätige dein FoodConnectMarkt-Konto',
+    html: verifyAccountEmailHtml(verifyUrl),
+    text: `Bitte bestätige dein Konto beim FoodConnectMarkt:\n\n${verifyUrl}\n\nDer Link ist 24 Stunden gültig.`,
+  });
+}
+
+module.exports = { sendMail, sendConfirmationEmail, sendWelcomeEmail, sendAccountVerificationEmail };

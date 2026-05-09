@@ -14,7 +14,8 @@ function adminAuth(req, _res, next) {
   try {
     const a = Buffer.from(provided.padEnd(64));
     const b = Buffer.from(config.adminPassword.padEnd(64));
-    authorized = a.length === b.length && crypto.timingSafeEqual(a, b) && provided === config.adminPassword;
+    authorized =
+      a.length === b.length && crypto.timingSafeEqual(a, b) && provided === config.adminPassword;
   } catch {
     authorized = false;
   }

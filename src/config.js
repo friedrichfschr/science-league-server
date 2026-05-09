@@ -35,8 +35,11 @@ const config = {
     password: process.env.EMAIL_PASSWORD || '',
     from: process.env.EMAIL_FROM || '',
   },
+  jwtSecret: process.env.JWT_SECRET || '',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   serverUrl: process.env.SERVER_URL || 'http://localhost:3100',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5174',
+  adminPassword: process.env.ADMIN_PASSWORD || '',
 };
 
 config.db.isConfigured = Boolean(config.db.host && config.db.name && config.db.user);

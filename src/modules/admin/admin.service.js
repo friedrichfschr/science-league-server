@@ -12,9 +12,6 @@ function translateDbError(err) {
   if (code === 'ER_NO_SUCH_TABLE') {
     throw new ApiError(503, 'Database table missing — run: npm run migrate');
   }
-  if (code === 'ER_ACCESS_DENIED_ERROR') {
-    throw new ApiError(503, 'Database access denied. Check DB_USER and DB_PASSWORD.');
-  }
   throw err;
 }
 
@@ -24,8 +21,7 @@ const adminService = {
     const [rows] = await db
       .query(
         `SELECT id, email, status, subscribed_at, confirmed_at, unsubscribed_at
-         FROM newsletter_subscribers
-         ORDER BY subscribed_at DESC`,
+         FROM newsletter_subscribers ORDER BY subscribed_at DESC`,
       )
       .catch(translateDbError);
     return rows;
@@ -39,32 +35,22 @@ const adminService = {
       )
       .catch(translateDbError);
 
-    if (rows.length === 0) {
-      return { sent: 0 };
-    }
+    if (rows.length === 0) return { sent: 0, total: 0, errors: [] };
 
     let sent = 0;
     const errors = [];
-
     for (const { email, unsubscribe_token } of rows) {
       const unsubscribeUrl = `${config.serverUrl}/api/newsletter/unsubscribe?token=${unsubscribe_token}`;
       const footer = `<p style="margin:20px 0 0;font-size:12px;color:#9ca3af;"><a href="${unsubscribeUrl}" style="color:#9ca3af;">Newsletter abbestellen</a></p>`;
       const textFooter = `\n\n---\nAbmelden: ${unsubscribeUrl}`;
-
       try {
-        await sendMail({
-          to: email,
-          subject,
-          html: html + footer,
-          text: text + textFooter,
-        });
+        await sendMail({ to: email, subject, html: html + footer, text: text + textFooter });
         sent++;
       } catch (err) {
         console.error('[admin] Failed to send to', email, ':', err.message);
         errors.push({ email, error: err.message });
       }
     }
-
     return { sent, total: rows.length, errors };
   },
 };

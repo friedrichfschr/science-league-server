@@ -6,6 +6,9 @@ const morgan = require('morgan');
 const { config } = require('./config');
 const { errorHandler } = require('./middleware/error-handler');
 const { newsletterRouter } = require('./modules/newsletter/newsletter.routes');
+const { authRouter } = require('./modules/auth/auth.routes');
+const { forumRouter } = require('./modules/forum/forum.routes');
+const { usersRouter } = require('./modules/users/users.routes');
 const { adminRouter } = require('./modules/admin/admin.routes');
 const { adminController } = require('./modules/admin/admin.controller');
 
@@ -18,14 +21,8 @@ function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
-        // In development, allow all origins (incl. Postman, curl, no-origin requests)
-        if (config.nodeEnv !== 'production') {
-          return callback(null, true);
-        }
-        // In production, restrict to configured origins
-        if (!origin || config.appOrigins.includes(origin)) {
-          return callback(null, true);
-        }
+        if (config.nodeEnv !== 'production') return callback(null, true);
+        if (!origin || config.appOrigins.includes(origin)) return callback(null, true);
         return callback(new Error(`Origin ${origin} is not allowed by CORS`));
       },
     }),
@@ -40,22 +37,35 @@ function createApp() {
 
   app.get('/', (_req, res) => {
     res.json({
-      app: 'foodconnect-newsletter-server',
+      app: 'foodconnect-server',
       status: 'ok',
       endpoints: [
+        'POST /api/auth/register',
+        'GET  /api/auth/verify',
+        'POST /api/auth/login',
+        'POST /api/auth/logout',
+        'GET  /api/auth/me',
+        'GET|POST /api/forum/posts',
+        'GET|PATCH|DELETE /api/forum/posts/:id',
+        'POST /api/forum/posts/:id/comments',
+        'PATCH|DELETE /api/forum/comments/:id',
+        'POST /api/forum/posts/:id/vote',
+        'POST /api/forum/comments/:id/vote',
+        'GET|PATCH /api/users/:id/role',
         'POST /api/newsletter/subscribe',
         'GET  /api/newsletter/confirm',
         'GET  /api/newsletter/unsubscribe',
         'GET  /admin',
-        'GET  /api/admin/subscribers',
-        'POST /api/admin/send',
       ],
     });
   });
 
+  app.use('/api/auth', authRouter);
+  app.use('/api/forum', forumRouter);
+  app.use('/api/users', usersRouter);
   app.use('/api/newsletter', newsletterRouter);
 
-  // Admin panel HTML (no auth — login is handled client-side)
+  // Admin panel
   app.get('/admin', adminController.panel);
   app.use('/api/admin', adminRouter);
 
