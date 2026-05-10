@@ -33,10 +33,7 @@ function createApp() {
   app.use(express.json({ limit: '64kb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
-  // Admin panel serves inline scripts — remove CSP header after helmet sets it
-  app.use('/admin', (_req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); });
-
-  app.get('/', (_req, res) => {
+app.get('/', (_req, res) => {
     res.json({
       app: 'foodconnect-server',
       status: 'ok',
@@ -74,8 +71,9 @@ function createApp() {
   app.use('/api/newsletter', newsletterRouter);
   app.use('/api/orders', ordersRouter);
 
-  // Admin panel
+  // Admin panel — script served as external file to satisfy script-src 'self' CSP
   app.get('/admin', adminController.panel);
+  app.get('/admin-script.js', adminController.script);
   app.use('/api/admin', adminRouter);
 
   app.use(errorHandler);
