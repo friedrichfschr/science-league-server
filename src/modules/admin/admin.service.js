@@ -27,6 +27,42 @@ const adminService = {
     return rows;
   },
 
+  async listUsers() {
+    const db = getPool();
+    const [rows] = await db
+      .query(
+        `SELECT id, email, username, role, email_verified, created_at
+         FROM users ORDER BY created_at DESC`,
+      )
+      .catch(translateDbError);
+    return rows;
+  },
+
+  async setUserRole({ userId, role }) {
+    const db = getPool();
+    const allowed = ['user', 'moderator', 'admin'];
+    if (!allowed.includes(role)) throw new ApiError(400, 'Ungültige Rolle.');
+    const [res] = await db
+      .query('UPDATE users SET role = ? WHERE id = ?', [role, userId])
+      .catch(translateDbError);
+    if (res.affectedRows === 0) throw new ApiError(404, 'Benutzer nicht gefunden.');
+    return { id: userId, role };
+  },
+
+  async listOrders() {
+    const db = getPool();
+    const [rows] = await db
+      .query(
+        `SELECT o.id, o.total, o.items, o.notes, o.status, o.created_at,
+                u.email AS user_email, u.username AS user_username
+         FROM orders o
+         JOIN users u ON u.id = o.user_id
+         ORDER BY o.created_at DESC`,
+      )
+      .catch(translateDbError);
+    return rows.map((r) => ({ ...r, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items }));
+  },
+
   async sendBroadcast({ subject, html, text }) {
     const db = getPool();
     const [rows] = await db

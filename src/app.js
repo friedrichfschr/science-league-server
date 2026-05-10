@@ -33,8 +33,8 @@ function createApp() {
   app.use(express.json({ limit: '64kb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
-  // Admin panel needs relaxed CSP to allow inline scripts
-  app.use('/admin', helmet({ contentSecurityPolicy: false }));
+  // Admin panel serves inline scripts — remove CSP header after helmet sets it
+  app.use('/admin', (_req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); });
 
   app.get('/', (_req, res) => {
     res.json({
@@ -47,6 +47,8 @@ function createApp() {
         'POST /api/auth/logout',
         'GET  /api/auth/me',
         'DELETE /api/auth/me',
+        'POST /api/auth/forgot-password',
+        'GET|POST /api/auth/reset-password',
         'GET|POST /api/forum/posts',
         'GET|PATCH|DELETE /api/forum/posts/:id',
         'POST /api/forum/posts/:id/comments',
@@ -58,6 +60,9 @@ function createApp() {
         'GET  /api/newsletter/confirm',
         'GET  /api/newsletter/unsubscribe',
         'POST /api/orders',
+        'GET /api/admin/users',
+        'PATCH /api/admin/users/:id/role',
+        'GET /api/admin/orders',
         'GET  /admin',
       ],
     });

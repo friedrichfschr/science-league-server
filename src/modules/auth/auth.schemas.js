@@ -20,4 +20,13 @@ const tokenQuerySchema = z.object({
   token: z.string().min(1),
 });
 
-module.exports = { registerSchema, loginSchema, tokenQuerySchema };
+const forgotPasswordSchema = z.object({
+  email: z.string().email().trim().toLowerCase(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+});
+
+module.exports = { registerSchema, loginSchema, tokenQuerySchema, forgotPasswordSchema, resetPasswordSchema };

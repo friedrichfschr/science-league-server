@@ -186,6 +186,38 @@ async function sendAccountVerificationEmail(to, verifyToken) {
   });
 }
 
+// ─── Password reset ───────────────────────────────────────────────────────────
+
+async function sendPasswordResetEmail(to, resetToken) {
+  const resetUrl = `${config.serverUrl}/api/auth/reset-password?token=${resetToken}`;
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f7f4ee;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07);">
+    <tr><td style="background:linear-gradient(135deg,#1c1917,#064e3b);padding:32px 40px;">
+      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#6ee7b7;">FoodConnectMarkt</p>
+      <h1 style="margin:12px 0 0;font-size:26px;font-weight:700;color:#fff;">Passwort zurücksetzen</h1>
+    </td></tr>
+    <tr><td style="padding:36px 40px;">
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">Du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Klicke auf den Button, um ein neues Passwort zu vergeben.</p>
+      <p style="margin:0 0 32px;font-size:15px;line-height:1.7;color:#374151;">Der Link ist <strong>1 Stunde</strong> gültig.</p>
+      <a href="${resetUrl}" style="display:inline-block;background:#065f46;color:#fff;text-decoration:none;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:600;">Passwort zurücksetzen →</a>
+      <p style="margin:28px 0 0;font-size:12px;color:#9ca3af;word-break:break-all;">Oder kopiere diesen Link:<br/><a href="${resetUrl}" style="color:#065f46;">${resetUrl}</a></p>
+    </td></tr>
+    <tr><td style="padding:20px 40px 32px;border-top:1px solid #f3f4f6;">
+      <p style="margin:0;font-size:12px;color:#9ca3af;">Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.</p>
+    </td></tr>
+  </table>
+</body></html>`;
+  await sendMail({
+    to,
+    subject: 'Passwort zurücksetzen – FoodConnectMarkt',
+    html,
+    text: `Passwort zurücksetzen:\n\n${resetUrl}\n\nDer Link ist 1 Stunde gültig.\n\nWenn du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail.`,
+  });
+}
+
 // ─── Order confirmation ───────────────────────────────────────────────────────
 
 function orderConfirmationHtml(username, order) {
@@ -288,5 +320,6 @@ module.exports = {
   sendConfirmationEmail,
   sendWelcomeEmail,
   sendAccountVerificationEmail,
+  sendPasswordResetEmail,
   sendOrderConfirmationEmail,
 };

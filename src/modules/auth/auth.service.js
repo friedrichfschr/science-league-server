@@ -114,6 +114,53 @@ const authService = {
     // Cascade FK deletes forum_posts, forum_comments, forum_votes, orders
     await db.query('DELETE FROM users WHERE id = ?', [userId]).catch(translateDbError);
   },
+
+  async forgotPassword(email) {
+    const db = getPool();
+    const [rows] = await db
+      .query('SELECT id FROM users WHERE email = ? LIMIT 1', [email])
+      .catch(translateDbError);
+
+    // Always respond the same way — don't reveal whether email exists
+    if (!rows[0]) return;
+
+    const resetToken = generateToken();
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await db
+      .query(
+        'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+        [resetToken, expires, rows[0].id],
+      )
+      .catch(translateDbError);
+
+    const { sendPasswordResetEmail } = require('../../lib/mailer');
+    sendPasswordResetEmail(email, resetToken).catch((err) =>
+      console.error('[auth] Failed to send password reset email:', err),
+    );
+  },
+
+  async resetPassword({ token, password }) {
+    const db = getPool();
+    const [rows] = await db
+      .query(
+        `SELECT id FROM users
+         WHERE reset_token = ? AND reset_token_expires > NOW() LIMIT 1`,
+        [token],
+      )
+      .catch(translateDbError);
+
+    const user = rows[0];
+    if (!user) throw new ApiError(400, 'Ungültiger oder abgelaufener Reset-Link.');
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await db
+      .query(
+        'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+        [passwordHash, user.id],
+      )
+      .catch(translateDbError);
+  },
 };
 
 module.exports = { authService };
