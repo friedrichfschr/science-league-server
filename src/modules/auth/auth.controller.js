@@ -51,6 +51,11 @@ const authController = {
     const user = await authService.getMe(req.user.id);
     res.json({ user });
   }),
+
+  deleteAccount: asyncHandler(async (req, res) => {
+    await authService.deleteAccount(req.user.id);
+    res.status(204).end();
+  }),
 };
 
 module.exports = { authController };

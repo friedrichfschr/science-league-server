@@ -9,6 +9,7 @@ const { newsletterRouter } = require('./modules/newsletter/newsletter.routes');
 const { authRouter } = require('./modules/auth/auth.routes');
 const { forumRouter } = require('./modules/forum/forum.routes');
 const { usersRouter } = require('./modules/users/users.routes');
+const { ordersRouter } = require('./modules/orders/orders.routes');
 const { adminRouter } = require('./modules/admin/admin.routes');
 const { adminController } = require('./modules/admin/admin.controller');
 
@@ -45,6 +46,7 @@ function createApp() {
         'POST /api/auth/login',
         'POST /api/auth/logout',
         'GET  /api/auth/me',
+        'DELETE /api/auth/me',
         'GET|POST /api/forum/posts',
         'GET|PATCH|DELETE /api/forum/posts/:id',
         'POST /api/forum/posts/:id/comments',
@@ -55,6 +57,7 @@ function createApp() {
         'POST /api/newsletter/subscribe',
         'GET  /api/newsletter/confirm',
         'GET  /api/newsletter/unsubscribe',
+        'POST /api/orders',
         'GET  /admin',
       ],
     });
@@ -64,6 +67,7 @@ function createApp() {
   app.use('/api/forum', forumRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/newsletter', newsletterRouter);
+  app.use('/api/orders', ordersRouter);
 
   // Admin panel
   app.get('/admin', adminController.panel);

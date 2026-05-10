@@ -108,6 +108,12 @@ const authService = {
     if (!user) throw new ApiError(404, 'Benutzer nicht gefunden.');
     return user;
   },
+
+  async deleteAccount(userId) {
+    const db = getPool();
+    // Cascade FK deletes forum_posts, forum_comments, forum_votes, orders
+    await db.query('DELETE FROM users WHERE id = ?', [userId]).catch(translateDbError);
+  },
 };
 
 module.exports = { authService };

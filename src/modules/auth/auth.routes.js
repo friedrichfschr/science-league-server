@@ -18,5 +18,6 @@ authRouter.get('/verify', authController.verify);
 authRouter.post('/login', authLimiter, authController.login);
 authRouter.post('/logout', authenticate, authController.logout);
 authRouter.get('/me', authenticate, authController.me);
+authRouter.delete('/me', authenticate, authController.deleteAccount);
 
 module.exports = { authRouter };

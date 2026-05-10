@@ -186,4 +186,107 @@ async function sendAccountVerificationEmail(to, verifyToken) {
   });
 }
 
-module.exports = { sendMail, sendConfirmationEmail, sendWelcomeEmail, sendAccountVerificationEmail };
+// ─── Order confirmation ───────────────────────────────────────────────────────
+
+function orderConfirmationHtml(username, order) {
+  const fmt = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+  const date = new Date(order.created_at).toLocaleDateString('de-DE', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  });
+
+  const itemRows = order.items.map((item) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;">${item.name}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;text-align:center;">${item.quantity} × ${item.unit}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;text-align:right;font-weight:600;">${fmt.format(item.price * item.quantity)}</td>
+    </tr>`).join('');
+
+  const notesRow = order.notes
+    ? `<tr><td colspan="3" style="padding:12px 0 0;font-size:13px;color:#6b7280;">Anmerkung: ${order.notes}</td></tr>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f7f4ee;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07);">
+    <tr><td style="background:linear-gradient(135deg,#1c1917,#064e3b);padding:32px 40px;">
+      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#6ee7b7;">FoodConnectMarkt</p>
+      <h1 style="margin:12px 0 0;font-size:26px;font-weight:700;color:#fff;">Bestellung bestätigt ✓</h1>
+    </td></tr>
+    <tr><td style="padding:36px 40px 24px;">
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#374151;">
+        Hallo <strong>${username}</strong>,<br/>
+        vielen Dank für deine Bestellung! Hier ist deine Quittung:
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <thead>
+          <tr>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#9ca3af;padding-bottom:8px;border-bottom:2px solid #f3f4f6;">Produkt</th>
+            <th style="text-align:center;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#9ca3af;padding-bottom:8px;border-bottom:2px solid #f3f4f6;">Menge</th>
+            <th style="text-align:right;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#9ca3af;padding-bottom:8px;border-bottom:2px solid #f3f4f6;">Preis</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+          ${notesRow}
+        </tbody>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+        <tr>
+          <td style="font-size:16px;font-weight:700;color:#111827;">Gesamt</td>
+          <td style="font-size:20px;font-weight:700;color:#065f46;text-align:right;">${fmt.format(order.total)}</td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:0 40px 36px;">
+      <div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;">
+        <p style="margin:0;font-size:13px;color:#166534;line-height:1.6;">
+          🥬 Deine Produkte werden frisch aus unserem Vertical-Farming-Turm geerntet.<br/>
+          Wir melden uns, sobald deine Bestellung zur Abholung bereit ist.
+        </p>
+      </div>
+      <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">Bestellnummer: ${order.id}<br/>Datum: ${date}</p>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function orderConfirmationText(username, order) {
+  const fmt = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+  const lines = order.items.map(
+    (item) => `  ${item.name} — ${item.quantity} × ${item.unit} — ${fmt.format(item.price * item.quantity)}`
+  );
+  return [
+    `Hallo ${username},`,
+    '',
+    'vielen Dank für deine Bestellung beim FoodConnectMarkt!',
+    '',
+    'Deine Quittung:',
+    ...lines,
+    '',
+    `Gesamt: ${fmt.format(order.total)}`,
+    order.notes ? `Anmerkung: ${order.notes}` : '',
+    '',
+    `Bestellnummer: ${order.id}`,
+    '',
+    'Deine Produkte werden frisch geerntet. Wir melden uns zur Abholung.',
+  ].filter((l) => l !== undefined).join('\n');
+}
+
+async function sendOrderConfirmationEmail(to, username, order) {
+  await sendMail({
+    to,
+    subject: `Deine Bestellung beim FoodConnectMarkt ✓`,
+    html: orderConfirmationHtml(username, order),
+    text: orderConfirmationText(username, order),
+  });
+}
+
+module.exports = {
+  sendMail,
+  sendConfirmationEmail,
+  sendWelcomeEmail,
+  sendAccountVerificationEmail,
+  sendOrderConfirmationEmail,
+};
