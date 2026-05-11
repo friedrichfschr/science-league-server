@@ -10,6 +10,7 @@ const { authRouter } = require('./modules/auth/auth.routes');
 const { forumRouter } = require('./modules/forum/forum.routes');
 const { usersRouter } = require('./modules/users/users.routes');
 const { ordersRouter } = require('./modules/orders/orders.routes');
+const { listsRouter } = require('./modules/lists/lists.routes');
 const { adminRouter } = require('./modules/admin/admin.routes');
 const { adminController } = require('./modules/admin/admin.controller');
 
@@ -57,6 +58,8 @@ app.get('/', (_req, res) => {
         'GET  /api/newsletter/confirm',
         'GET  /api/newsletter/unsubscribe',
         'POST /api/orders',
+        'GET|POST /api/lists',
+        'DELETE /api/lists/:id',
         'GET /api/admin/users',
         'PATCH /api/admin/users/:id/role',
         'GET /api/admin/orders',
@@ -70,6 +73,7 @@ app.get('/', (_req, res) => {
   app.use('/api/users', usersRouter);
   app.use('/api/newsletter', newsletterRouter);
   app.use('/api/orders', ordersRouter);
+  app.use('/api/lists', listsRouter);
 
   // Admin panel — script served as external file to satisfy script-src 'self' CSP
   app.get('/admin', adminController.panel);
