@@ -31,15 +31,12 @@ const forumService = {
         `SELECT
            p.id, p.title, p.body, p.created_at, p.updated_at,
            u.id AS author_id, u.username AS author_username, u.role AS author_role,
-           COALESCE(SUM(v.value), 0) AS score,
-           COUNT(DISTINCT c.id) AS comment_count,
-           ${userId ? 'MAX(CASE WHEN v2.user_id = ? THEN v2.value ELSE 0 END) AS my_vote,' : '0 AS my_vote,'}
+           (SELECT COALESCE(SUM(v.value), 0) FROM forum_votes v WHERE v.target_type = 'post' AND v.target_id = p.id) AS score,
+           (SELECT COUNT(*) FROM forum_comments c WHERE c.post_id = p.id) AS comment_count,
+           ${userId ? '(SELECT COALESCE(MAX(v2.value), 0) FROM forum_votes v2 WHERE v2.target_type = \'post\' AND v2.target_id = p.id AND v2.user_id = ?) AS my_vote,' : '0 AS my_vote,'}
            COUNT(*) OVER() AS total_count
          FROM forum_posts p
          JOIN users u ON u.id = p.author_id
-         LEFT JOIN forum_votes v  ON v.target_type = 'post' AND v.target_id = p.id
-         LEFT JOIN forum_comments c ON c.post_id = p.id
-         ${userId ? 'LEFT JOIN forum_votes v2 ON v2.target_type = \'post\' AND v2.target_id = p.id AND v2.user_id = ?' : ''}
          GROUP BY p.id, u.id
          ORDER BY ${orderBy}
          LIMIT ? OFFSET ?`,
