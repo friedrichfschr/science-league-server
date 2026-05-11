@@ -41,7 +41,7 @@ const forumService = {
          ORDER BY ${orderBy}
          LIMIT ? OFFSET ?`,
         userId
-          ? [userId, userId, limit, offset]
+          ? [userId, limit, offset]
           : [limit, offset],
       )
       .catch(translateDbError);
